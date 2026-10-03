@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For My Love</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0b0f19;
+            overflow: hidden;
+            font-family: 'Georgia', serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .message-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ffffff;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            pointer-events: none;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .message-container h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            color: #fce4ec;
+            text-shadow: 0 0 10px rgba(255, 182, 193, 0.5);
+        }
+
+        .message-container p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #f8bbd0;
+            text-shadow: 0 0 8px rgba(255, 182, 193, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="flowerCanvas"></canvas>
+
+    <div class="message-container" id="messageContainer">
+        <h1>My Love</h1>
+        <p>I’m sorry about last night and I love you with all my heart and soul forever and ever.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flowerCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Stem {
+            constructor(x, targetHeight) {
+                this.x = x;
+                this.startY = canvas.height;
+                this.targetY = canvas.height - targetHeight;
+                this.currentY = this.startY;
+                this.speed = 2 + Math.random() * 1.5;
+                this.reachedTop = false;
+                this.flower = null;
+            }
+
+            update() {
+                if (!this.reachedTop) {
+                    this.currentY -= this.speed;
+                    if (this.currentY <= this.targetY) {
+                        this.currentY = this.targetY;
+                        this.reachedTop = true;
+                        this.flower = new Flower(this.x, this.currentY);
+                    }
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.x, canvas.height);
+                ctx.lineTo(this.x, this.currentY);
+                ctx.strokeStyle = '#2e7d32';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                if (this.flower) {
+                    this.flower.update();
+                    this.flower.draw();
+                }
+            }
+        }
+
+        class Flower {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.currentRadius = 0;
+                this.maxRadius = 12 + Math.random() * 10;
+                this.petalCount = Math.floor(Math.random() * 3) + 5; // 5 to 7 petals
+                
+                // Color palettes inspired by the video (pink, white, yellow, peach)
+                const palettes = [
+                    { petal: '#ff80ab', center: '#ffd54f' },
+                    { petal: '#ffffff', center: '#ffca28' },
+                    { petal: '#f48fb1', center: '#ffb300' },
+                    { petal: '#ff4081', center: '#ffe082' },
+                    { petal: '#ffccbc', center: '#ffa726' }
+                ];
+                this.colors = palettes[Math.floor(Math.random() * palettes.length)];
+            }
+
+            update() {
+                if (this.currentRadius < this.maxRadius) {
+                    this.currentRadius += 0.2;
+                }
+            }
+
+            draw() {
+                if (this.currentRadius <= 0) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Draw Petals
+                ctx.fillStyle = this.colors.petal;
+                for (let i = 0; i < this.petalCount; i++) {
+                    const angle = (i * 2 * Math.PI) / this.petalCount;
+                    ctx.save();
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.ellipse(0, this.currentRadius * 0.7, this.currentRadius * 0.4, this.currentRadius * 0.7, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Draw Center Pistil / Core
+                ctx.beginPath();
+                ctx.arc(0, 0, this.currentRadius * 0.35, 0, 2 * Math.PI);
+                ctx.fillStyle = this.colors.center;
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        let stems = [];
+        let totalStems = Math.floor(window.innerWidth / 15); // Density based on screen width
+        let generationStarted = false;
+
+        function initStems() {
+            stems = [];
+            let spacing = canvas.width / totalStems;
+            for (let i = 0; i < totalStems; i++) {
+                let x = i * spacing + Math.random() * spacing;
+                let targetHeight = 150 + Math.random() * (canvas.height * 0.45);
+                stems.push(new Stem(x, targetHeight));
+            }
+        }
+
+        initStems();
+
+        let allFlowersGrown = false;
+        let showMessageTimer = 0;
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let allReached = true;
+            stems.forEach(stem => {
+                stem.update();
+                stem.draw();
+                if (!stem.reachedTop) {
+                    allReached = false;
+                }
+            });
+
+            if (allReached && !allFlowersGrown) {
+                allFlowersGrown = true;
+                setTimeout(() => {
+                    document.getElementById('messageContainer').style.opacity = '1';
+                }, 1000); // Wait 1 second after flowers finish growing before showing the text
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
